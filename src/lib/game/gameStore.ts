@@ -14,7 +14,6 @@ const createInitialState = (): GameState => ({
     .map(() => Array(3).fill(null)),
   currentPlayer: "white",
   selectedPiece: null,
-  isPlacementMode: true,
   availablePieces: {
     white: { ...INITIAL_PIECES },
     black: { ...INITIAL_PIECES },
@@ -37,11 +36,6 @@ function createGameStore() {
       update((state) => ({
         ...state,
         selectedPiece: null,
-      })),
-    toggleMode: () =>
-      update((state) => ({
-        ...state,
-        isPlacementMode: !state.isPlacementMode,
       })),
     placePiece: (piece: Piece, position: Position) =>
       update((state) => {

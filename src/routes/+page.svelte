@@ -10,15 +10,14 @@
   $: availablePieces = $gameStore.availablePieces;
   $: currentPlayer = $gameStore.currentPlayer;
   $: board = $gameStore.board;
-  $: isPlacementMode = $gameStore.isPlacementMode;
   $: selectedPiece = $gameStore.selectedPiece;
   $: winner = $gameStore.winner;
 
   let errorMessage = "";
 
-  // Calculate valid moves when a piece is selected in move mode
+  // Berechne validMoves basierend auf der ausgewählten Figur
   $: validMoves =
-    !isPlacementMode && selectedPiece
+    selectedPiece && selectedPiece.position.row >= 0
       ? getValidMoves(board, selectedPiece.position, selectedPiece.piece)
       : [];
 
@@ -28,78 +27,56 @@
 
   function handleCellClick(row: number, col: number) {
     if (winner) return;
+    errorMessage = "";
     const position: Position = { row, col };
+    const cellPiece = board[row][col];
 
-    if (isPlacementMode) {
-      if (!handlePlacement(position)) {
-        errorMessage = "Ungültiger Zug.";
-      } else {
-        errorMessage = "";
-      }
-    } else {
-      if (!handleMovement(position)) {
-        errorMessage = "Ungültiger Zug.";
-      } else {
-        errorMessage = "";
-      }
-    }
-  }
-
-  function handlePlacement(position: Position): boolean {
-    if (board[position.row][position.col]) {
-      return false;
-    }
-    if (selectedPiece) {
-      gameStore.placePiece(selectedPiece.piece, position);
-      setTimeout(() => {
-        const newWinner = checkWinner($gameStore.board);
-        if (newWinner) gameStore.setWinner(newWinner);
-      }, 0);
-    }
-    return true;
-  }
-
-  function handleMovement(position: Position): boolean {
-    if (!selectedPiece) {
-      const piece = board[position.row][position.col];
-      if (piece && piece.color === currentPlayer) {
-        gameStore.selectPiece(piece, position);
-      }
-      return true;
-    } else {
-      const isValidTarget = validMoves.some(
-        (move) => move.row === position.row && move.col === position.col
-      );
-
-      if (isValidTarget) {
-        gameStore.movePiece(selectedPiece.position, position);
-        setTimeout(() => {
-          const newWinner = checkWinner($gameStore.board);
-          if (newWinner) gameStore.setWinner(newWinner);
-        }, 0);
-        return true;
-      } else {
-        // If clicking on another own piece, select it instead
-        const piece = board[position.row][position.col];
-        if (piece && piece.color === currentPlayer) {
-          gameStore.selectPiece(piece, position);
-        } else {
+    if (cellPiece && cellPiece.color === currentPlayer) {
+      // Eigene Figur auf dem Brett anklicken, um sie zu bewegen
+      gameStore.selectPiece(cellPiece, position);
+    } else if (selectedPiece) {
+      if (selectedPiece.position.row === -1) {
+        // Neue Figur platzieren
+        if (!board[row][col]) {
+          gameStore.placePiece(selectedPiece.piece, position);
           gameStore.clearSelection();
+          checkForWinner();
+        } else {
+          errorMessage = "Ungültiger Zug.";
         }
-        return false;
+      } else {
+        // Figur bewegen
+        const isValidTarget = validMoves.some(
+          (move) => move.row === row && move.col === col
+        );
+        if (isValidTarget) {
+          gameStore.movePiece(selectedPiece.position, position);
+          gameStore.clearSelection();
+          checkForWinner();
+        } else {
+          errorMessage = "Ungültiger Zug.";
+        }
       }
     }
   }
 
   function selectPieceFromInventory(type: PieceType) {
-    if (!isPlacementMode) return;
     if (availablePieces[currentPlayer][type] <= 0) return;
     const piece: Piece = { type, color: currentPlayer };
+    // Position (-1, -1) kennzeichnet eine neue Figur zum Platzieren
     gameStore.selectPiece(piece, { row: -1, col: -1 });
+  }
+
+  function checkForWinner() {
+    setTimeout(() => {
+      const newWinner = checkWinner($gameStore.board);
+      if (newWinner) gameStore.setWinner(newWinner);
+    }, 0);
   }
 
   function resetGame() {
     gameStore.reset();
+    errorMessage = "";
   }
 </script>
 
@@ -116,68 +93,59 @@
       <div class="current-player">
         Current Player: <span class={currentPlayer}>{currentPlayer}</span>
       </div>
-      <label class="mode-toggle">
-        <input
-          type="checkbox"
-          bind:checked={$gameStore.isPlacementMode}
-          on:change={() => gameStore.clearSelection()}
-          disabled={!hasAvailablePieces}
-        />
-        {isPlacementMode ? "Figur platzieren" : "Figur bewegen"}
-      </label>
     </div>
 
-    {#if isPlacementMode}
-      <div class="piece-inventory">
-        <h2>Verfügbare Figuren ({currentPlayer})</h2>
-        <div class="inventory-player">
-          {#each Object.entries(availablePieces[currentPlayer]) as [type, count]}
-            {#if count > 0}
-              <button
-                class="piece-button"
-                class:selected={selectedPiece?.piece.type === type}
-                on:click={() => selectPieceFromInventory(type as PieceType)}
-              >
-                <ChessPiece
-                  piece={{ type: type as PieceType, color: currentPlayer }}
-                />
-                <span class="piece-count">×{count}</span>
-              </button>
-            {/if}
-          {/each}
-        </div>
+    <!-- Das Figureninventar bleibt immer sichtbar -->
+    <div class="piece-inventory">
+      <h2>Verfügbare Figuren ({currentPlayer})</h2>
+      <div class="inventory-player">
+        {#each Object.entries(availablePieces[currentPlayer]) as [type, count]}
+          {#if count > 0}
+            <button
+              class="piece-button"
+              class:selected={selectedPiece?.piece.type === type &&
+                selectedPiece?.position.row === -1}
+              on:click={() => selectPieceFromInventory(type as PieceType)}
+            >
+              <ChessPiece
+                piece={{ type: type as PieceType, color: currentPlayer }}
+              />
+              <span class="piece-count">×{count}</span>
+            </button>
+          {/if}
+        {/each}
       </div>
+    </div>
+
+    {#if errorMessage}
+      <div class="error-message">{errorMessage}</div>
     {/if}
-  {/if}
 
-  {#if errorMessage}
-    <div class="error-message">{errorMessage}</div>
-  {/if}
-
-  <div class="board">
-    {#each board as row, i}
-      {#each row as cell, j}
-        {@const isValidMove = validMoves.some(
-          (move) => move.row === i && move.col === j
-        )}
-        <div
-          class="cell"
-          class:dark={(i + j) % 2 === 1}
-          class:selected={selectedPiece?.position.row === i &&
-            selectedPiece?.position.col === j}
-          class:valid-move={isValidMove}
-          on:click={() => handleCellClick(i, j)}
-        >
-          {#if cell}
-            <ChessPiece piece={cell} />
-          {/if}
-          {#if isValidMove}
-            <div class="move-indicator" />
-          {/if}
-        </div>
+    <div class="board">
+      {#each board as row, i}
+        {#each row as cell, j}
+          {@const isValidMove = validMoves.some(
+            (move) => move.row === i && move.col === j
+          )}
+          <div
+            class="cell"
+            class:dark={(i + j) % 2 === 1}
+            class:selected={selectedPiece?.position.row === i &&
+              selectedPiece?.position.col === j}
+            class:valid-move={isValidMove}
+            on:click={() => handleCellClick(i, j)}
+          >
+            {#if cell}
+              <ChessPiece piece={cell} />
+            {/if}
+            {#if isValidMove}
+              <div class="move-indicator" />
+            {/if}
+          </div>
+        {/each}
       {/each}
-    {/each}
-  </div>
+    </div>
+  {/if}
 </main>
 
 <style>
@@ -214,13 +182,6 @@
   .current-player .black {
     color: #000;
     font-weight: bold;
-  }
-
-  .mode-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
   }
 
   .board {
