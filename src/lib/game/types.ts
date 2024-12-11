@@ -25,10 +25,11 @@ export interface GameState {
     position: Position;
   } | null;
   availablePieces: {
-    white: Record<PieceType, number>;
-    black: Record<PieceType, number>;
+    white: { [key in PieceType]: number };
+    black: { [key in PieceType]: number };
   };
   winner: PlayerColor | null;
+  boardSize: number;
 }
 
 export const INITIAL_PIECES: Record<PieceType, number> = {

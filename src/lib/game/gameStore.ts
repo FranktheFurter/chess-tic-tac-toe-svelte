@@ -8,10 +8,10 @@ import type {
 } from "./types";
 import { INITIAL_PIECES } from "./types";
 
-const createInitialState = (): GameState => ({
-  board: Array(3)
+const createInitialState = (size: number = 3): GameState => ({
+  board: Array(size)
     .fill(null)
-    .map(() => Array(3).fill(null)),
+    .map(() => Array(size).fill(null)),
   currentPlayer: "white",
   selectedPiece: null,
   availablePieces: {
@@ -19,6 +19,7 @@ const createInitialState = (): GameState => ({
     black: { ...INITIAL_PIECES },
   },
   winner: null,
+  boardSize: size,
 });
 
 function createGameStore() {
@@ -26,7 +27,7 @@ function createGameStore() {
 
   return {
     subscribe,
-    reset: () => set(createInitialState()),
+    reset: (size: number = 3) => set(createInitialState(size)),
     selectPiece: (piece: Piece, position: Position) =>
       update((state) => ({
         ...state,

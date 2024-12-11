@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { page } from "$app/stores";
   import ChessPiece from "$lib/components/ChessPiece.svelte";
   import { gameStore } from "$lib/game/gameStore";
   import { isValidMove, checkWinner, getValidMoves } from "$lib/game/gameLogic";
@@ -24,6 +25,11 @@
   $: hasAvailablePieces = Object.values(availablePieces[currentPlayer]).some(
     (count) => count > 0
   );
+
+  onMount(() => {
+    const size = Number($page.url.searchParams.get("size")) || 3;
+    gameStore.reset(size);
+  });
 
   function handleCellClick(row: number, col: number) {
     if (winner) return;
@@ -119,7 +125,7 @@
       <div class="error-message">{errorMessage}</div>
     {/if}
 
-    <div class="board">
+    <div class="board" style="grid-template-columns: repeat({$gameStore.board.length}, 100px);">
       {#each board as row, i}
         {#each row as cell, j}
           {@const isValidMove = validMoves.some(
@@ -184,7 +190,6 @@
 
   .board {
     display: grid;
-    grid-template-columns: repeat(3, 100px);
     gap: 2px;
     background-color: #666;
     padding: 2px;

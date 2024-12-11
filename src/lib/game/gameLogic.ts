@@ -6,8 +6,9 @@ export function isValidMove(
   to: Position,
   piece: Piece
 ): boolean {
+  const boardSize = board.length;
   // Check if destination is within bounds
-  if (to.row < 0 || to.row > 2 || to.col < 0 || to.col > 2) {
+  if (to.row < 0 || to.row >= boardSize || to.col < 0 || to.col >= boardSize) {
     return false;
   }
 
@@ -25,7 +26,7 @@ export function isValidMove(
       // Pawns can only move forward (different for white and black)
       const direction = piece.color === "white" ? -1 : 1;
       const forwardRow = from.row + direction;
-      if (forwardRow < 0 || forwardRow > 2) {
+      if (forwardRow < 0 || forwardRow >= boardSize) {
         return false;
       }
       const validForward =
@@ -89,10 +90,11 @@ export function getValidMoves(
   piece: Piece
 ): Position[] {
   const validMoves: Position[] = [];
+  const boardSize = board.length;
 
-  // Check all possible positions on the 3x3 board
-  for (let row = 0; row < 3; row++) {
-    for (let col = 0; col < 3; col++) {
+  // Check all possible positions on the board
+  for (let row = 0; row < boardSize; row++) {
+    for (let col = 0; col < boardSize; col++) {
       const targetPos: Position = { row, col };
       if (isValidMove(board, position, targetPos, piece)) {
         validMoves.push(targetPos);
@@ -106,55 +108,76 @@ export function getValidMoves(
 export function checkWinner(
   board: (Piece | null)[][]
 ): "white" | "black" | null {
+  const boardSize = board.length;
+  const winLength = 3; // Keep win condition at 3 in a row
+
   // Check rows
-  for (let row = 0; row < 3; row++) {
-    if (
-      board[row][0] &&
-      board[row][1] &&
-      board[row][2] &&
-      board[row][0]!.color === board[row][1]!.color &&
-      board[row][1]!.color === board[row][2]!.color
-    ) {
-      return board[row][0]!.color;
+  for (let row = 0; row < boardSize; row++) {
+    for (let col = 0; col <= boardSize - winLength; col++) {
+      const color = board[row][col]?.color;
+      if (color) {
+        let win = true;
+        for (let i = 1; i < winLength; i++) {
+          if (board[row][col + i]?.color !== color) {
+            win = false;
+            break;
+          }
+        }
+        if (win) return color;
+      }
     }
   }
 
   // Check columns
-  for (let col = 0; col < 3; col++) {
-    if (
-      board[0][col] &&
-      board[1][col] &&
-      board[2][col] &&
-      board[0][col]!.color === board[1][col]!.color &&
-      board[1][col]!.color === board[2][col]!.color
-    ) {
-      return board[0][col]!.color;
+  for (let col = 0; col < boardSize; col++) {
+    for (let row = 0; row <= boardSize - winLength; row++) {
+      const color = board[row][col]?.color;
+      if (color) {
+        let win = true;
+        for (let i = 1; i < winLength; i++) {
+          if (board[row + i][col]?.color !== color) {
+            win = false;
+            break;
+          }
+        }
+        if (win) return color;
+      }
     }
   }
 
-  // Check diagonals
-  if (
-    board[0][0] &&
-    board[1][1] &&
-    board[2][2] &&
-    board[0][0]!.color === board[1][1]!.color &&
-    board[1][1]!.color === board[2][2]!.color
-  ) {
-    return board[0][0]!.color;
+  // Check diagonals (top-left to bottom-right)
+  for (let row = 0; row <= boardSize - winLength; row++) {
+    for (let col = 0; col <= boardSize - winLength; col++) {
+      const color = board[row][col]?.color;
+      if (color) {
+        let win = true;
+        for (let i = 1; i < winLength; i++) {
+          if (board[row + i][col + i]?.color !== color) {
+            win = false;
+            break;
+          }
+        }
+        if (win) return color;
+      }
+    }
   }
 
-  if (
-    board[0][2] &&
-    board[1][1] &&
-    board[2][0] &&
-    board[0][2]!.color === board[1][1]!.color &&
-    board[1][1]!.color === board[2][0]!.color
-  ) {
-    return board[0][2]!.color;
+  // Check diagonals (top-right to bottom-left)
+  for (let row = 0; row <= boardSize - winLength; row++) {
+    for (let col = winLength - 1; col < boardSize; col++) {
+      const color = board[row][col]?.color;
+      if (color) {
+        let win = true;
+        for (let i = 1; i < winLength; i++) {
+          if (board[row + i][col - i]?.color !== color) {
+            win = false;
+            break;
+          }
+        }
+        if (win) return color;
+      }
+    }
   }
-
-  // Überprüfe, ob die Gewinnbedingungen korrekt funktionieren
-  // (Der vorhandene Code scheint korrekt zu sein, aber stelle sicher, dass er in der Praxis funktioniert)
 
   return null;
 }
