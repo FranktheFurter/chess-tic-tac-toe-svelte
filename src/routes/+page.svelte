@@ -100,19 +100,17 @@
       <h2>Verfügbare Figuren ({currentPlayer})</h2>
       <div class="inventory-player">
         {#each Object.entries(availablePieces[currentPlayer]) as [type, count]}
-          {#if count > 0}
-            <button
-              class="piece-button"
-              class:selected={selectedPiece?.piece.type === type &&
-                selectedPiece?.position.row === -1}
-              on:click={() => selectPieceFromInventory(type as PieceType)}
-            >
-              <ChessPiece
-                piece={{ type: type as PieceType, color: currentPlayer }}
-              />
-              <span class="piece-count">×{count}</span>
-            </button>
-          {/if}
+          <button
+            class="piece-button"
+            class:selected={selectedPiece?.piece.type === type && selectedPiece?.position.row === -1}
+            class:disabled={count === 0}
+            on:click={() => selectPieceFromInventory(type as PieceType)}
+          >
+            <ChessPiece
+              piece={{ type: type as PieceType, color: currentPlayer }}
+            />
+            <span class="piece-count">×{count}</span>
+          </button>
         {/each}
       </div>
     </div>
@@ -253,6 +251,15 @@
   .piece-button.selected {
     border-color: #4caf50;
     background-color: #e8f5e9;
+  }
+
+  .piece-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .piece-button.disabled:hover {
+    border-color: #ccc;
   }
 
   .piece-count {
